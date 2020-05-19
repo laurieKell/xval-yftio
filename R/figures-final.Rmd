@@ -1,0 +1,462 @@
+---
+title: "Hindcast Case Studies"
+subtitle: "Tropical Tunas: Indian Ocean Yellowfin"
+author: "Laurence Kell"
+output: rmarkdown:::pdf_document
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEncoding{UTF-8}
+tags: FLPKG FLR
+license: Creative Commons Attribution-ShareAlike 4.0 International
+---
+  
+```{r knitr_init, echo=FALSE, results="hide"}
+library(knitr)
+## Global options
+opts_chunk$set(echo    =FALSE,
+               eval    =TRUE,
+               cache   =TRUE,
+               cache.path="../cache/xval/",
+               prompt  =FALSE,
+               comment =NA,
+               message =FALSE,
+               tidy    =FALSE,
+               warning =FALSE,
+               fig.height=6,
+               fig.width =8,
+               fig.path  ="../tex/final-",
+               dev       =c("png"))
+
+options(digits=3)
+
+iFig=0
+```
+```{r, pkgs, echo=FALSE, message=FALSE}
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(reshape)
+library(reshape2)
+
+library(r4ss)
+library(stringr)
+library(plyr)
+library(dplyr)
+library(xvl)
+
+library(diags)
+
+library(GGally)
+
+library(Metrics)
+
+library(plotrix)
+
+library(rdrop2)
+```
+
+```{r}
+dirDrop="/home/laurence-kell/Dropbox/xval/io-yft"
+```
+
+```{r, eval=FALSE}
+SS_doRetro(masterdir=file.path(dirDrop,"base"), oldsubdir="",newsubdir="retros",years=0:64,exefile=NULL)
+SS_doRetro(masterdir=file.path(dirDrop,"aspm"), oldsubdir="",newsubdir="retros",years=0:64,exefile=NULL)
+```
+
+```{r, funcs}
+mase<-function(obs,hat){
+   t=length(hat)
+   sum(abs(obs-hat))/sum(abs(obs[-1]-obs[-length(obs)]))*(t-1)/t}
+
+mh<-function (actual, predicted, step_size = 1)
+{
+naive_start <- step_size + 1
+n <- as.numeric(length(actual))
+naive_end <- n - step_size
+sum_errors <- sum(ae(actual, predicted))
+naive_errors <- sum(ae(actual[naive_start:n], actual[1:naive_end]))
+return(sum_errors/(n * naive_errors/naive_end))
+}
+
+```
+
+# Retrospective
+
+```{r, retro-data}
+getPath <- function(file) {
+  if (!grepl(.Platform$file.sep,file))
+    res <- getwd()
+  else
+    res <- substr(file,1,max(gregexpr(.Platform$file.sep,file)[[1]])-1)
+  return(res)}
+
+getFile<-function(file) {
+  res <- substr(file,max(gregexpr(.Platform$file.sep,file)[[1]])+1,
+                nchar(file))
+  return(res)}
+
+
+x    =substr(getFile(system2("ls",args=file.path(dirDrop,"base/hyrs/kobe*"),stdout=TRUE)),5,7)
+base=mdply(x, function(tail) data.frame(tail=tail,read.table(paste(file.path(dirDrop,"base/hyrs/kobe"),tail,".csv",sep=""))))[,-1]
+names(base)[2]="Yr"
+
+x    =substr(getFile(system2("ls",args=file.path(dirDrop,"aspm/hyrs/kobe*"),stdout=TRUE)),5,7)
+aspm=mdply(x, function(tail) data.frame(tail=tail,read.table(paste(file.path(dirDrop,"aspm/hyrs/kobe"),tail,".csv",sep=""))))[,-1]
+names(aspm)[2]="Yr"
+
+load(file.path(file.path(dirDrop,"jabba","jabba-ky.RData")))
+names(ky)[c(2,6:7)]=c("Yr","stock","harvest")
+
+retro=rbind(cbind(run="base",base),
+            cbind(run="aspm",aspm),
+            cbind(run="jabba",ky[,c("Yr","tail","stock","harvest")]))
+retro$tail   =as.numeric(retro$tail)
+retro$Yr     =as.numeric(retro$Yr)
+retro$stock  =as.numeric(retro$stock)
+retro$harvest=as.numeric(retro$harvest)
+
+retro=mutate(retro,  year        =(Yr-1)%/%4+1947,
+                     quarter     =Yr-(year-1950)*4-12,
+                     tail.year   =(tail-1)%/%4+1947,
+                     tail.quarter=tail-(tail.year-1950)*4-12)
+
+dat=subset(retro,year<=2017&quarter==4&tail.quarter==4)[,c("run","tail.year","year","stock","harvest")]
+dat=melt(dat,id=c("run","tail.year","year"))
+dat=subset(dat,year>=2001)
+#dat$run=factor(dat$run,levels=c("base","aspm","jabba"),
+#                       labels=c("SS",  "ASPM","JABBA"))
+```
+
+
+```{r, retro}
+ggplot(subset(dat,year<=tail.year))+
+  geom_line(aes(year,value),  data=subset(dat,tail.year==2016),col="black",lwd=1.5)+
+  facet_grid(variable~run,scale="free")+theme_bw()+theme(legend.position="bottom")+
+  geom_hline(aes(yintercept=1))+
+  geom_line(aes(year,value,group=tail.year,col=year<tail.year))+
+  geom_point(aes(year,value), data=subset(dat,tail.year==year),  col="brown")+
+  #geom_line(aes(year,value),  data=subset(dat,tail.year==year),  col="brown",linetype=3)+
+  #geom_point(aes(year,value), data=subset(dat,tail.year==year-3),  col="blue")+
+  #geom_line(aes(year,value),  data=subset(dat,tail.year==year-3),  col="blue", linetype=3)+
+  xlab("Year")+ylab("Relative to Benchmark")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Retrospective analyses.
+
+```{r, retro3}
+ggplot(subset(dat,year<=tail.year+3))+
+  geom_line(aes(year,value),  data=subset(dat,tail.year==2016),col="black",lwd=1.5)+
+  facet_grid(variable~run,scale="free")+theme_bw()+theme(legend.position="bottom")+
+  geom_hline(aes(yintercept=1))+
+  geom_line(aes(year,value,group=tail.year,col=year<tail.year))+
+  geom_point(aes(year,value), data=subset(dat,tail.year==year-3),  col="blue")+
+  #geom_line(aes(year,value),  data=subset(dat,tail.year==year-3),  col="blue", linetype=3)+
+  xlab("Year")+ylab("Relative to Benchmark")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Retrospective analyses (cyan) with 3 year projections (pink); the thick black line is the assessed estimates, the brown points the terminal years and blue points are the 3 step ahead projections.
+
+
+
+# CPUE
+
+```{r, cpue-data}
+base=SS_output(file.path(dirDrop,"base"),ncols=320,forecast=FALSE, verbose=FALSE, printstats=FALSE)
+aspm=SS_output(file.path(dirDrop,"aspm"),ncols=320,forecast=FALSE, verbose=FALSE, printstats=FALSE)
+
+load(file.path(dirDrop,"jabba/yftio/yftio_Base_jabba.rdata"))
+
+u=rbind(cbind(run="base",base$cpue),
+        cbind(run="aspm",aspm$cpue))
+
+u=rbind(transmute(u,run=run,name=Fleet_name,yr=Yr,obs=Obs),
+        transmute(melt(jabba$inputseries$cpue,id="Yr"),yr=Yr,run="jabba",name=substr(variable,1,7),obs=value))
+
+#The fist quarter of the fist year 1950 has the time 13
+u=mutate(u, year   =(yr-1)%/%4+1947,
+            quarter=yr-(year-1950)*4-12)
+```
+
+```{r, residuals-data, fig.height=10}
+load(file.path(dirDrop,"jabba/yftio/yftio_Base_jabba.rdata"))
+
+dgs=rbind(cbind(run="base",diags:::.diagUss(file.path(dirDrop,"base"))),
+          cbind(run="aspm",diags:::.diagUss(file.path(dirDrop,"aspm"))))[,c("run","name","year","season","obs","hat","residual")]
+dgs=rbind(dgs,cbind(run="jabba",jabba$diags[,c("name","year","season","obs","hat","residual")]))
+
+dgs=mutate(dgs, yr     =(year-1)%/%4+1947,
+                quarter=year-(yr-1950)*4-12,
+                name  =substr(name,1,7))
+```
+
+
+
+```{r, cpue-residual-runs, fig.height=10,fig.width=8}
+library(qicharts2)
+
+dgs$residual=log(dgs$obs/dgs$hat)
+runs=ddply(dgs, .(run,name,quarter), with, qic(year,residual,chart="i")$data)
+runs=ddply(runs,.(run,name,quarter),with, 
+               data.frame(crossings=all(n.crossings>n.crossings.min),
+                          runs     =all(longest.run<longest.run.max)))
+runs=transform(runs,Pass=runs&crossings)
+
+ggplot(dgs)+ 
+  geom_hline(aes(yintercept=0))+
+  geom_line(aes(year,residual),position=position_dodge(width=1),col="grey60")+
+  geom_point(aes(year,residual),position=position_dodge(width=1),col="red",lwd=0.5,
+             data=subset(dgs,residual<0))+
+  geom_linerange(aes(year,ymin=0,ymax=residual),position=position_dodge(width=1),col="red",lwd=0.5,
+             data=subset(dgs,residual<0))+
+  geom_point(aes(year,residual),position=position_dodge(width=1),col="black",lwd=0.5,
+             data=subset(dgs,residual>0))+
+  geom_linerange(aes(year,ymin=0,ymax=residual),position=position_dodge(width=1),col="black",lwd=0.5,
+             data=subset(dgs,residual>0))+
+  theme(legend.position="bottom")+
+  facet_grid(run+name~quarter,scale="free",space="free_x")+
+  theme_bw(14)+
+  theme(legend.position="bottom",strip.text.y=element_text(angle=0),
+                                 strip.text.x=element_text(angle=90),
+                                 axis.text.x=element_text(angle=45, hjust=1))+ 
+  xlab("Year")+ylab("")+
+  geom_rect(aes(fill=Pass), xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.25,
+            data=runs)+
+     scale_fill_manual(values=c("red","green"))+
+     scale_x_continuous(breaks=seq(1950,2010,10))
+```
+
+```{r, base-retro}
+load(file.path(dirDrop,"base/hy.RData"))
+dat =subset(merge(hy[[2]],hy[[5]][,c(1:2,4)]),year>220)
+names(dat)[4]="Yr"
+
+basey=mutate(dat, year  =(Yr-1)%/%4+1947,
+                  quarter=Yr-(year-1950)*4-12)
+```
+
+
+```{r, aspm-retro}
+load(file.path(dirDrop,"aspm/hy.RData"))
+dat =subset(merge(hy[[2]],hy[[5]][,c(1:2,4)]),year>220)
+names(dat)[4]="Yr"
+
+aspmy=mutate(dat, year   =(Yr-1)%/%4+1947,
+                 quarter=Yr-(year-1950)*4-12)
+```
+
+
+```{r, jabba-retro}
+load(file.path(dirDrop,"jabba/jabba-hy.RData"))
+names(hy)[5]="Yr"
+
+jabby=mutate(hy, year   =(Yr-1)%/%4+1947,
+                 quarter=Yr-(year-1950)*4-12,
+                 name  =substr(name,1,7))
+
+```
+
+
+```{r, hy-data}
+hy=rbind(cbind(run="base",basey), 
+         cbind(run="aspm",aspmy)) 
+
+hy=rbind(transmute(hy,   run=run,     name=name,year=year,quarter=quarter,tail=tail,yr=Yr,obs=obs,hat=hat),
+         transmute(jabby,run="flabba",name=name,year=year,quarter=quarter,tail=tail,yr=Yr,obs=obs,hat=hat))
+
+hy=mutate(hy,  tail.year   =(tail-1)%/%4+1947,
+               tail.quarter=tail-(tail.year-1950)*4-12)
+```
+
+\newpage
+
+
+```{r, hy-plot, fig.height=10}
+hy$run=factor(hy$run,levels=c("base","aspm","flabba"),labels=c("SS","ASPM","JABBA"))
+ggplot(subset(hy,yr>220&yr<=tail&tail.quarter==quarter))+
+  geom_line(aes(year,hat,group=paste(tail,run)),col="grey50")+
+  geom_point(aes(year,obs),data=subset(hy,tail==yr),col="red")+
+  geom_point(aes(year,hat,col=run),data=subset(hy,tail==yr))+
+  facet_grid(name+run~quarter,scale="free")+
+  theme_bw()+ theme(legend.position="bottom") +
+  scale_color_manual(values=c("blue","brown","darkblue"))
+```
+
+**Figure `r iFig=iFig+1; iFig`** JABBA: Time series of CPUE indices for hindcast by **quarter, year and series**, observations (red) and estimates from hindcast (blue).
+
+
+```{r, hy3-plot, fig.height=10}
+ggplot(subset(hy,yr>220&year<=tail.year+3&tail.quarter==quarter))+
+  geom_line(aes(year,hat,group=paste(tail,run)),col="grey50",lwd=0.25)+
+  geom_point(aes(year,obs),data=subset(hy,tail==yr),col="red")+
+  geom_point(aes(year,hat),data=subset(hy,tail.year==year-3&tail.quarter==quarter),col="black")+
+  #geom_point(aes(year,hat),data=subset(hy,tail.year==year-1&tail.quarter==quarter),col="blue")+
+  facet_grid(name+run~quarter,scale="free")+
+  theme_bw()+ theme(legend.position="bottom")
+```
+
+**Figure `r iFig=iFig+1; iFig`** JABBA: Time series of CPUE indices with 3 steps ahead for hindcast by **quarter, year and series**, observations (red) and estimates from hindcast (blue).
+
+
+
+```{r, taylor-residuals, fig.width=8, fig.height=8}
+dat=subset(hy,tail.year==year&tail.quarter==quarter)
+
+
+with(dat=subset(dgs,run=="jabba"&name=="SURVEY1"&quarter==1),
+taylor.diagram(obs,
+               hat,
+               add=FALSE,col="red",pch=4,pos.cor=TRUE,
+               #xlab="X Axis",
+               #ylab="Y Axis",
+               main="Taylor Diagram",
+               show.gamma=TRUE,ngamma=3,sd.arcs=1,ref.sd=TRUE,
+               grad.corr.lines=c(0.2,0.4,0.6,0.8,0.9),
+               pcex=1,cex.axis=1,
+               normalize=TRUE,
+               mar=c(5,4,6,6),
+               lwd=10,font=5,lty=3))
+
+d_ply(dgs,.(quarter,name,run), with, taylor.diagram(obs,hat,add=TRUE,normalize=TRUE,
+                                                    col=c("base"="red","jabba"="blue","aspm"="brown")[run[1]],
+                                                    pch=c("SURVEY1"=1,"SURVEY2"=2,"SURVEY3"=3,"SURVEY4"=4)[name[1]]))
+
+legend(1.5,1.5,cex=1.2,pt.cex=1.2,legend=c("BASE","ASPM", "JABBA","Survey 1","Survey 2","Survey 3","Survey 4"),
+                                  col   =c("red", "brown","blue", "black",   "black",   "black",   "black"),
+                                  pch   =c(1,1,1,1,2,3,4))
+```
+
+**Figure `r iFig=iFig+1; iFig`** CPUE model fits.
+
+```{r}
+save(hy,file="/home/laurence-kell/Desktop/tmp/hy.RData")
+```
+
+
+```{r, taylor-hy, fig.width=8, fig.height=8}
+#hy=mutate(hy,  tail.year   =(tail-1)%/%4+1947,
+#               tail.quarter=tail-(tail.year-1950)*4-12)
+
+dat=subset(hy,tail.year==year-2&tail.quarter==quarter)
+
+with(subset(dat,run=="JABBA"&name=="SURVEY1"&quarter==1),
+taylor.diagram(obs,
+               hat,
+               add=FALSE,col="red",pch=4,pos.cor=TRUE,
+               #xlab="X Axis",
+               #ylab="Y Axis",
+               main="Taylor Diagram",
+               show.gamma=TRUE,ngamma=3,sd.arcs=1,ref.sd=TRUE,
+               grad.corr.lines=c(0.2,0.4,0.6,0.8,0.9),
+               pcex=1,cex.axis=1,
+               normalize=TRUE,
+               mar=c(5,4,6,6),
+               lwd=10,font=5,lty=3))
+
+d_ply(dat,.(quarter,name,run), with, taylor.diagram(obs,hat,add=TRUE,normalize=TRUE,
+                                                    col=c("base"="red","flabba"="blue","aspm"="brown")[run[1]],
+                                                    pch=c("SURVEY1"=1,"SURVEY2"=2,"SURVEY3"=3,"SURVEY4"=4)[name[1]]))
+
+legend(1.5,1.5,cex=1.2,pt.cex=1.2,legend=c("BASE","ASPM", "JABBA","Survey 1","Survey 2","Survey 3","Survey 4"),
+                                  col   =c("red", "brown","blue", "black",   "black",   "black",   "black"),
+                                  pch   =c(1,1,1,1,2,3,4))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Three step ahead fits.
+
+```{r, cpue-prediction-runs, fig.height=10,fig.width=8}
+library(qicharts2)
+
+dat$residual=log(dat$obs/dat$hat)
+runs=ddply(dat, .(run,name,quarter), with, qic(year,residual,chart="i")$data)
+runs=ddply(runs,.(run,name,quarter),with, 
+               data.frame(crossings=all(n.crossings>n.crossings.min),
+                          runs     =all(longest.run<longest.run.max)))
+runs=transform(runs,Pass=runs&crossings)
+
+ggplot(dat)+ 
+  geom_hline(aes(yintercept=0))+
+  geom_line(aes(year,residual),position=position_dodge(width=1),col="grey60")+
+  geom_point(aes(year,residual),position=position_dodge(width=1),col="red",lwd=0.5,
+             data=subset(dat,residual<0))+
+  geom_linerange(aes(year,ymin=0,ymax=residual),position=position_dodge(width=1),col="red",lwd=0.5,
+             data=subset(dat,residual<0))+
+  geom_point(aes(year,residual),position=position_dodge(width=1),col="black",lwd=0.5,
+             data=subset(dat,residual>0))+
+  geom_linerange(aes(year,ymin=0,ymax=residual),position=position_dodge(width=1),col="black",lwd=0.5,
+             data=subset(dat,residual>0))+
+  theme(legend.position="bottom")+
+  facet_grid(run+name~quarter,scale="free",space="free_x")+
+  theme_bw(14)+
+  theme(legend.position="bottom",strip.text.y=element_text(angle=0),
+                                 strip.text.x=element_text(angle=90),
+                                 axis.text.x=element_text(angle=45, hjust=1))+ 
+  xlab("Year")+ylab("")+
+  geom_rect(aes(fill=Pass), xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=Inf, alpha=0.25,
+            data=runs)+
+     scale_fill_manual(values=c("red","green"))+
+     scale_x_continuous(breaks=seq(1950,2010,10))
+```
+
+**Figure `r iFig=iFig+1; iFig`** Residuals for SS scenarios by year, red background indicates unusually long runs or unusually few crossings.
+
+```{r, cpue-plot}
+ggplot(u)+
+  geom_path(aes(year,obs,col=run))+
+  facet_grid(name~quarter,scale="free")+
+  theme(legend.position="bottom")+
+  xlab("Year")+ylab("CPUE")
+```
+
+**Figure `r iFig=iFig+1; iFig`** CPUEs as used by the three models.
+
+```{r, residual-plot, fig.height=10}
+ggplot(dgs)+
+  geom_hline(aes(yintercept=0))+
+  #geom_line(aes(yr,residual, col=run),linetype=3)+
+  geom_point(aes(yr,residual,col=run),position=position_dodge(width = 2),size=0.2)+
+  geom_smooth(aes(yr,residual,col=run),se=FALSE)+
+  #geom_linerange(aes(yr,ymin=0,ymax=residual,col=run),position=position_dodge(width = 2))+
+  facet_grid(name~quarter)+
+  theme_bw()+
+  theme(legend.position="bottom")+
+  xlab("Year")+ylab("Residuals")
+```
+
+**Figure `r iFig=iFig+1; iFig`** Residuals.
+
+\newpage
+
+```{r, stats}
+stats=ddply(subset(hy,tail==yr),.(run,name,quarter), 
+            with, {
+              obs=obs[order(year)]
+              hat=hat[order(year)]
+              data.frame(rmse=rmse(log(obs),log(hat)), 
+                             mae =mae( log(obs),log(hat)),
+                             mase=Metrics:::mase(log(obs),log(hat)),
+                             mape=mape(log(obs),log(hat)),
+                             rse = rse(log(obs),log(hat)),
+                             sd  = var(log(obs/hat))^0.5,
+                             cor = cor(log(obs),log(hat)))})
+```
+## RMSE
+
+
+```{r, pairs}
+ggpairs(stats[,-(1:3)])
+```
+
+
+**Figure `r iFig=iFig+1; iFig`** Metrics.
+
+
+```{r, rmse}
+cast(stats[,c("name","run","quarter","rmse")],name~quarter~run)   
+```
+
+## MASE
+```{r, mase}
+cast(stats[,c("name","run","quarter","mase")],name~quarter~run)   
+```
