@@ -1,0 +1,23 @@
+When inspecting residuals there is a danger of hypothesis fishing and if multiple true hypotheses are tested it is likely that some of them will be rejected. Therefore it is valuable to reserve part of the data for validation, so that a pattern’s significance is not tested on the same data set which suggested the pattern.
+
+
+\begin{algorithm}[!ht]
+\begin{algorithmic}[1]
+\State $t=0$
+\State initialize $P_{t}$
+\State evaluate structures in $P_{t}$
+\While {termination condition not satisfied}
+\State $t=t+1$
+\State select reproduction $C_{t}$ from $P_{t-1}$
+\State recombine and mutate structures in $C_{t}$
+
+forming $C'_{t}$
+\State evaluate structures in $C'_{t}$
+\State select each individual for $P_{t}$ from $C'_{t}$ 
+
+or $P_{t-1}$
+\EndWhile
+\caption{Genetic algorithm \cite{FogelDavidB2009}}
+\label{genetic-algorithm}
+\end{algorithmic}
+\end{algorithm}

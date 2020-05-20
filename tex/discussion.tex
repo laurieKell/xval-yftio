@@ -1,0 +1,34 @@
+
+I was thinking about running a jackknife to estimate the prediction residuals, but a problem is the serial correlations in the observations. So I think the one-step-ahead is a good procedure as it is pragmatic, since we are checking whether the next step will trip us up.
+
+Apparently in the ICES benchmark assessments the main check is the retrospective analysis, however, if you used strong shrinkage, i.e. made current F and recruitment an average of recent values then there would be no retrospective pattern, But! when you projected the estimates would be crazy. Thats what the projections are important.
+
+I was also thinking about removing the all indices 1 year-at-time together and doing it index by index.
+
+Doing it all together is a good 1st step as it shows the transition from retrospective analysis of F&SSB to model free hindcast. But index by index allows us to see the impact of each index, which is important if we want to work out how to extend/modify the model.
+I guess if we look at  model residuals we may say all the models were equally good, however, if we perform a 1,3, step ahead predictions we show that in fact SS is just modelling noise and Jabba by throwing everything into process error has little prediction skill, so we should choose ASPM an intermediate model, add area effects to Jabba.
+
+te model should fit the trends in the abundance indices as well as possible,
+
+Whitten, A.R., Punt, A.E., Taylor, B.L., 2013. Pink ling (Genypterus blacodes) stock
+assessment based on data up to 2011. In: Tuck, G.N. (Ed.), Stock Assessment for
+the Southern and Eastern Scalefish Fishery: 2013 Part X. Australian Fisheries
+Management Authority and CSIRO Marine and Atmospheric Research, Hobart
+(in press).
+
+
+When inspecting prediction residuals, or other residuals, one scans for a large number of possible patterns, e.g. bias, drift, skewness, heavy tails, correlation with states
+or driving inputs, and heteroscedasticity. One should avoid the dangers of hypothesis
+fishing and recall that if multiple true hypotheses are tested, it is likely that some of
+them are rejected. It is rarely possible to conceive a list of tests on the residuals before
+seeing them, which means that the hypotheses we are testing, implicitly or explicitly,
+are not proposed independently of data. This is not in agreement with the principles
+of statistics; this is a well-known problem of post-hoc analysis. For that reason [and
+several others, Wasserstein and Lazar (2016)] the ubiquitous significance level of 5%
+should not be used uncritically. Similarly, it is recommendable to follow the general
+advice of reserving part of the data for validation, so that a pattern’s significance is
+not tested on the same data set which suggested the pattern.
+
+A strong retrospective pattern is a problem with historical fits, which could be improved using shinkage, or even using a model with no prediction skill, i.e. simply saying that biomass = 1. So getting rid of a retrospective pattern is not necessarily fixing the problem. Neither can you validate a model using retrospective analysis. You need to do this by comparing fits to observations. So while the absence of retrospective patterns is nice, as it gives you 1 less thing to worry about it isnt sufficient.
+ A MASE >1 means that a random walk is better than your model, i.e. you need a new model! This is probably because there are some processes that are not being modelled correctly or else the dataseries with MASE>1 do not contain information on stock abundance or are in conflict with those where MASE<1. Therefore you need to extend or revisit your model structure. MASE can be used to compare across models unlike AIC, so can still be used in this process to compare new models and datasets. For example in a paper we are drafting for Indian Ocean yellowfin we ran SS with area/quarter effects, ASPM-SS and JABBA, The best MASE values were seen for ASPM, this was because the length comps only added noise, and area effects were important but were not included in JABBA. In all  models the CPUE not in the main area of the fishery had MASE>1 and so was probbaly only add noise and should be excluded. So MASE allows models to be compared and the impact of datasets to be compared. Also by looking at predictions we are avoiding overfitting which could result in a retrospective pattern or poor prediction skill 
+\
