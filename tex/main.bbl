@@ -1,0 +1,28 @@
+\begin{thebibliography}{}
+
+\bibitem[Glickman and Zenk, 2000]{glickman2000glossary}
+Glickman, T.~S. and Zenk, W. (2000).
+\newblock {\em Glossary of meteorology}.
+\newblock American Meteorological Society.
+
+\bibitem[Hodges et~al., 1992]{hodges1992you}
+Hodges, J.~S., Dewar, J.~A., and Center, A. (1992).
+\newblock {\em Is it you or your model talking?: A framework for model
+  validation}.
+\newblock Santa Monica, CA: Rand.
+
+\bibitem[Hurtado-Ferro et~al., 2014]{hurtado2014looking}
+Hurtado-Ferro, F., Szuwalski, C.~S., Valero, J.~L., Anderson, S.~C.,
+  Cunningham, C.~J., Johnson, K.~F., Licandeo, R., McGilliard, C.~R., Monnahan,
+  C.~C., Muradian, M.~L., et~al. (2014).
+\newblock Looking in the rear-view mirror: bias and retrospective patterns in
+  integrated, age-structured stock assessment models.
+\newblock page fsu198.
+
+\bibitem[Kell et~al., 2016]{kell2016xval}
+Kell, L.~T., Kimoto, A., and Kitakado, T. (2016).
+\newblock Evaluation of the prediction skill of stock assessment using
+  hindcasting.
+\newblock {\em Fisheries research}, 183:119--127.
+
+\end{thebibliography}
